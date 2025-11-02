@@ -29,3 +29,29 @@ def limpiar_datos(df: pd.DataFrame) -> pd.DataFrame:
     if df.isnull().sum().sum() > 0:
         print("Se detectaron valores nulos. Serán reemplazados por la media de la columna.")
         df.fillna(df.mean(numeric_only=True), inplace=True)
+
+    # ------------------------------------------
+    # 3. Corrección de valores negativos
+    # ------------------------------------------
+
+    columnas_numericas = df.select_dtypes(include=[np.number]).columns
+    for col in columnas_numericas:
+        negativos = df[df[col] < 0].shape[0]
+        if negativos > 0:
+            print(f"{negativos} valores negativos detectados en '{col}'. Corrigiendo...")
+            df.loc[df[col] < 0, col] = np.nan
+            df[col].fillna(df[col].mean(), inplace=True)
+
+    # ------------------------------------------
+    # 4. Detección y corrección de valores extremos
+    # ------------------------------------------
+
+    for col in columnas_numericas:
+        Q1, Q3 = df[col].quantile([0.25, 0.75])
+        RIC = Q3 - Q1
+        bajo, alto = Q1 - 1.5 * RIC, Q3 + 1.5 * RIC
+        extremos = df[(df[col] < bajo) | (df[col] > alto)]
+        if len(extremos) > 0:
+            print(f"{len(extremos)} valores extremos detectados en '{col}'. Corrigiendo...")
+            df[col] = np.where(df[col] < bajo, bajo,
+                        np.where(df[col] > alto, alto, df[col]))
