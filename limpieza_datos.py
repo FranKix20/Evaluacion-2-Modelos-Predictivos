@@ -55,3 +55,34 @@ def limpiar_datos(df: pd.DataFrame) -> pd.DataFrame:
             print(f"{len(extremos)} valores extremos detectados en '{col}'. Corrigiendo...")
             df[col] = np.where(df[col] < bajo, bajo,
                         np.where(df[col] > alto, alto, df[col]))
+
+    # ------------------------------------------
+    # 5. Normalización de escalas
+    # ------------------------------------------
+
+    for col in ['Pacientes_GES', 'Pacientes_Consulta', 'Pacientes_Cirugia']:
+        if col in df.columns:
+            df[col] = df[col] / 1_000_000  # transformar a millones
+
+    # ------------------------------------------
+    # 6. Validaciones lógicas
+    # ------------------------------------------
+
+    incoherentes = df[df['Pacientes_Consulta'] < df['Pacientes_GES']]
+    if len(incoherentes) > 0:
+        print(f"{len(incoherentes)} registros con incoherencias (Consulta < GES). Corrigiendo...")
+        df.loc[df['Pacientes_Consulta'] < df['Pacientes_GES'], 'Pacientes_Consulta'] = \
+            df['Pacientes_GES'] * 1.1
+
+    # Años válidos
+    df = df[(df['Año'] >= 2020) & (df['Año'] <= 2025)]
+
+    # Días de espera positivos
+    for col in ['Promedio_dias_GES', 'Promedio_dias_Consulta', 'Promedio_dias_Cirugia']:
+        df[col] = df[col].apply(lambda x: x if x > 0 else df[col].mean())
+
+    df.reset_index(drop=True, inplace=True)
+
+    print("Limpieza y validación completadas correctamente.")
+    print(f"Registros finales: {len(df)} | Columnas: {len(df.columns)}")
+    return df
